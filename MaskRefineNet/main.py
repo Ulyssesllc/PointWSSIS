@@ -6,6 +6,7 @@ Apache-2.0
 
 import os
 import warnings
+
 warnings.filterwarnings(action="ignore")
 
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -41,60 +42,128 @@ import pycocotools.mask as mask_util
 
 torch.backends.cudnn.benchmark = True
 
-NUM_CLASSES = {'coco': 80, 'BDD100K': 8}
+NUM_CLASSES = {"coco": 80, "BDD100K": 8}
+
 
 def str2bool(v):
     return v.lower() in ("yes", "y", "true", "t", "1")
+
 
 def get_argparser():
     parser = argparse.ArgumentParser()
 
     # Path option
-    parser.add_argument("--data_root", type=str, default="/mnt/tmp", help="path to Dataset")
-    parser.add_argument("--workspace", type=str, default="results", help="workspace path")
-    parser.add_argument("--exp_name", type=str, default="segmentation", help="experiment name")
-    parser.add_argument("--dataset", type=str, default='coco', choices=["coco", "BDD100K"])
+    parser.add_argument(
+        "--data_root",
+        type=str,
+        default=os.environ.get("DETECTRON2_DATASETS", "YOUR_DATA_ROOT"),
+        help="path to Dataset",
+    )
+    parser.add_argument(
+        "--workspace", type=str, default="results", help="workspace path"
+    )
+    parser.add_argument(
+        "--exp_name", type=str, default="segmentation", help="experiment name"
+    )
+    parser.add_argument(
+        "--dataset", type=str, default="coco", choices=["coco", "BDD100K"]
+    )
 
     # Deeplab Options
-    parser.add_argument("--num_classes", type=int, default=80, help="80 for coco, 8 for BDD100K")
+    parser.add_argument(
+        "--num_classes", type=int, default=80, help="80 for coco, 8 for BDD100K"
+    )
     parser.add_argument("--box_scale", type=float, default=2.0)
-    
-    parser.add_argument("--weak_pth", nargs='+', type=str)
+
+    parser.add_argument("--weak_pth", nargs="+", type=str)
     parser.add_argument("--gt_json", type=str)
     parser.add_argument("--eval_pth", type=str)
-    parser.add_argument("--eval_json", type=str, default="datasets/coco/instances_train2017_refine_test_1K.json")
-    
+    parser.add_argument(
+        "--eval_json",
+        type=str,
+        default="datasets/coco/instances_train2017_refine_test_1K.json",
+    )
+
     # Train Options
     parser.add_argument("--ddp", action="store_true", default=False)
     parser.add_argument("--amp", action="store_true", default=False)
     parser.add_argument("--test_only", action="store_true", default=False)
-    parser.add_argument("--train_iters", type=int, default=0, help="total training iteration")
+    parser.add_argument(
+        "--train_iters", type=int, default=0, help="total training iteration"
+    )
     parser.add_argument("--warm_iters", type=int, default=0, help="warm-up iterations")
 
     parser.add_argument("--optim", type=str, default="adam", choices=["sgd", "adam"])
-    parser.add_argument("--lr", type=float, default=1e-4, help="learning rate (default: 1e-4)")
-    parser.add_argument("--lr_policy", type=str, default="cosine", help="learning rate scheduler policy")
+    parser.add_argument(
+        "--lr", type=float, default=1e-4, help="learning rate (default: 1e-4)"
+    )
+    parser.add_argument(
+        "--lr_policy", type=str, default="cosine", help="learning rate scheduler policy"
+    )
     parser.add_argument("--weight_decay", type=float, default=0, help="weight decay")
 
-    parser.add_argument("--batch_size", type=int, default=16, help="batch size (default: 16)")
-    parser.add_argument("--train_size", type=str, default="256", help="input size for training (support multi-scale sizes)")
-    parser.add_argument("--val_size", type=str, default="256", help="input size for validation (support multi-scale sizes)")
+    parser.add_argument(
+        "--batch_size", type=int, default=16, help="batch size (default: 16)"
+    )
+    parser.add_argument(
+        "--train_size",
+        type=str,
+        default="256",
+        help="input size for training (support multi-scale sizes)",
+    )
+    parser.add_argument(
+        "--val_size",
+        type=str,
+        default="256",
+        help="input size for validation (support multi-scale sizes)",
+    )
     parser.add_argument("--workers", type=int, default=4)
-    parser.add_argument("--restore", default='none', type=str, help="restore from checkpoint")
+    parser.add_argument(
+        "--restore", default="none", type=str, help="restore from checkpoint"
+    )
     parser.add_argument("--ckpt_dir", default="ckpts", type=str, help="save dir")
-    
-    parser.add_argument("--aug_min_scale", type=float, default=0.5, help="min scale for random scale augmentation")
-    parser.add_argument("--aug_max_scale", type=float, default=1.5, help="max scale for random scale augmentation")
-    parser.add_argument("--aug_color", type=float, default=0.0, help="prob for random color jiterring augmentation")
 
-    parser.add_argument("--random_seed", type=int, default=3407, help="random seed (default: 2)")
-    parser.add_argument("--print_interval", type=int, default=100, help="print interval of loss (default: 10)")
-    parser.add_argument("--val_interval", type=int, default=1000, help="epoch interval for eval (default: 100)")
+    parser.add_argument(
+        "--aug_min_scale",
+        type=float,
+        default=0.5,
+        help="min scale for random scale augmentation",
+    )
+    parser.add_argument(
+        "--aug_max_scale",
+        type=float,
+        default=1.5,
+        help="max scale for random scale augmentation",
+    )
+    parser.add_argument(
+        "--aug_color",
+        type=float,
+        default=0.0,
+        help="prob for random color jiterring augmentation",
+    )
+
+    parser.add_argument(
+        "--random_seed", type=int, default=3407, help="random seed (default: 2)"
+    )
+    parser.add_argument(
+        "--print_interval",
+        type=int,
+        default=100,
+        help="print interval of loss (default: 10)",
+    )
+    parser.add_argument(
+        "--val_interval",
+        type=int,
+        default=1000,
+        help="epoch interval for eval (default: 100)",
+    )
 
     # DDP Options
     parser.add_argument("--gpu", type=int, default=0)
     parser.add_argument("--world_size", type=int, default=1)
-    parser.add_argument("--local_rank", type=int, default=int(os.getenv("LOCAL_RANK", "0")))
+    parser.add_argument(
+        "--local_rank", type=int, default=int(os.getenv("LOCAL_RANK", "0"))
+    )
 
     return parser
 
@@ -141,8 +210,8 @@ def train():
 
         cur_itrs += 1
 
-        images = dat['img'].to(device, non_blocking=True)
-        labels = dat['target'].to(device, non_blocking=True)
+        images = dat["img"].to(device, non_blocking=True)
+        labels = dat["target"].to(device, non_blocking=True)
 
         optimizer.zero_grad()
 
@@ -155,7 +224,7 @@ def train():
         scaler.update()
         scheduler.step()
 
-        avg_time.update(time.time()-end)
+        avg_time.update(time.time() - end)
         avg_loss.update(loss.item(), images.size(0))
 
         if cur_itrs % args.print_interval == 0:
@@ -171,9 +240,17 @@ def train():
                     "Left: {7:.1f} min | "
                     "LR: {8:.8f} | "
                     "Loss: {avg_loss.avg:.6}".format(
-                        epoch, cur_itrs, args.train_iters, cur_itrs / args.train_iters * 100, (end - start) / 60,
-                        data_time.avg * 1000, avg_time.avg * 1000, (args.train_iters - cur_itrs) * avg_time.avg / 60,
-                        optimizer.param_groups[0]["lr"], avg_loss=avg_loss)
+                        epoch,
+                        cur_itrs,
+                        args.train_iters,
+                        cur_itrs / args.train_iters * 100,
+                        (end - start) / 60,
+                        data_time.avg * 1000,
+                        avg_time.avg * 1000,
+                        (args.train_iters - cur_itrs) * avg_time.avg / 60,
+                        optimizer.param_groups[0]["lr"],
+                        avg_loss=avg_loss,
+                    )
                 )
 
                 report_dict = dict()
@@ -182,9 +259,11 @@ def train():
                 report_dict["optim/learning_rate"] = optimizer.param_groups[-1]["lr"]
                 report_dict["optim/data_time"] = data_time.avg * 1000
                 report_dict["optim/epoch_time"] = avg_time.avg * 1000
-                report_dict["optim/left"] = ((args.train_iters - cur_itrs) * avg_time.avg / 60)
+                report_dict["optim/left"] = (
+                    (args.train_iters - cur_itrs) * avg_time.avg / 60
+                )
                 report_dict["train/loss"] = avg_loss.avg
-                
+
                 tensorboard_report(writer, report_dict, cur_itrs)
 
         if (cur_itrs) % args.val_interval == 0:
@@ -208,7 +287,9 @@ def train():
                 if val_score["val/AP"] >= best_AP:
                     best_AP = val_score["val/AP"]
                     save_path = f"{args.ckpt_dir}/best_AP.pt"
-                    save_checkpoint(save_path, model, epoch, cur_itrs, best_AP, args.ddp)
+                    save_checkpoint(
+                        save_path, model, epoch, cur_itrs, best_AP, args.ddp
+                    )
                     print("Best COCO AP Model saved: %.8f" % (best_AP))
 
             model.train()
@@ -228,47 +309,54 @@ def validate():
         for inputs, meta in valid_loader:
             if args.local_rank == 0:
                 progress_bar.update(1)
-                
-            for n in range(len(inputs)):
-                meta[n]['image_id'] = int(meta[n]['image_id'])
-                meta[n]['category_id'] = int(meta[n]['category_id'])
-                meta[n]['bbox'] = list(map(int, meta[n]['bbox']))
-                meta[n]['crop_bbox'] = list(map(int, meta[n]['crop_bbox']))
-                meta[n]['ori_size'] = list(map(int, meta[n]['ori_size']))
-                meta[n]['segmentation'] = meta[n]['segmentation'][0].numpy()
 
-                if meta[n]['ori_size'] == [0, 0]:
-                    refined_mask = meta[n]['segmentation']
+            for n in range(len(inputs)):
+                meta[n]["image_id"] = int(meta[n]["image_id"])
+                meta[n]["category_id"] = int(meta[n]["category_id"])
+                meta[n]["bbox"] = list(map(int, meta[n]["bbox"]))
+                meta[n]["crop_bbox"] = list(map(int, meta[n]["crop_bbox"]))
+                meta[n]["ori_size"] = list(map(int, meta[n]["ori_size"]))
+                meta[n]["segmentation"] = meta[n]["segmentation"][0].numpy()
+
+                if meta[n]["ori_size"] == [0, 0]:
+                    refined_mask = meta[n]["segmentation"]
                 else:
                     out = model(inputs[n].to(device))
                     out = torch.softmax(out, 1)
-                    out = F.interpolate(out, size=meta[n]['ori_size'], mode="bilinear", align_corners=False)
+                    out = F.interpolate(
+                        out,
+                        size=meta[n]["ori_size"],
+                        mode="bilinear",
+                        align_corners=False,
+                    )
                     out = out.argmax(1)[0].detach().cpu().numpy()
                     out = (out > 0).astype(np.uint8)
 
-                    refined_mask = np.zeros_like(meta[n]['segmentation'])
-                    refined_mask[meta[n]['crop_bbox'][1]:meta[n]['crop_bbox'][3]+1, 
-                                 meta[n]['crop_bbox'][0]:meta[n]['crop_bbox'][2]+1] = out
-                    
+                    refined_mask = np.zeros_like(meta[n]["segmentation"])
+                    refined_mask[
+                        meta[n]["crop_bbox"][1] : meta[n]["crop_bbox"][3] + 1,
+                        meta[n]["crop_bbox"][0] : meta[n]["crop_bbox"][2] + 1,
+                    ] = out
+
                     if refined_mask.sum() > 0:
                         y_coord, x_coord = refined_mask.nonzero()
                         ymin, xmin = int(y_coord.min()), int(x_coord.min())
                         ymax, xmax = int(y_coord.max()), int(x_coord.max())
-                        meta[n]['bbox'] = [xmin, ymin, xmax-xmin, ymax-ymin]
+                        meta[n]["bbox"] = [xmin, ymin, xmax - xmin, ymax - ymin]
                     else:
-                        refined_mask = meta[n]['segmentation']
+                        refined_mask = meta[n]["segmentation"]
 
                 refined_mask_rle = mask_util.encode(np.asfortranarray(refined_mask))
-                refined_mask_rle['counts'] = refined_mask_rle['counts'].decode('ascii') 
-                
-                meta[n]['segmentation'] = refined_mask_rle
-                meta[n]['area'] = int(np.sum(refined_mask))
-                meta[n]['iscrowd'] = False
-                meta[n]['id'] = 0
-                meta[n]['score'] = 1.0
+                refined_mask_rle["counts"] = refined_mask_rle["counts"].decode("ascii")
 
-                del meta[n]['ori_size']
-                del meta[n]['crop_bbox']
+                meta[n]["segmentation"] = refined_mask_rle
+                meta[n]["area"] = int(np.sum(refined_mask))
+                meta[n]["iscrowd"] = False
+                meta[n]["id"] = 0
+                meta[n]["score"] = 1.0
+
+                del meta[n]["ori_size"]
+                del meta[n]["crop_bbox"]
                 _annotations.append(meta[n])
 
     annotations = gather(_annotations, dst=0)
@@ -276,35 +364,36 @@ def validate():
 
     if args.local_rank == 0:
         progress_bar.close()
-        
+
         for inst_id, anno in enumerate(annotations):
-            anno['id'] = inst_id+1
-                
+            anno["id"] = inst_id + 1
+
         pred_annotations = COCO()
-        pred_annotations.dataset['categories'] = valid_dst.gt_annotations.dataset['categories']
-        pred_annotations.dataset['annotations'] = annotations
-        pred_annotations.dataset['images'] = valid_dst.gt_annotations.dataset['images']
+        pred_annotations.dataset["categories"] = valid_dst.gt_annotations.dataset[
+            "categories"
+        ]
+        pred_annotations.dataset["annotations"] = annotations
+        pred_annotations.dataset["images"] = valid_dst.gt_annotations.dataset["images"]
         pred_annotations.createIndex()
 
-        print('\nEvaluating Refined Masks:')
-        coco_eval = COCOeval(valid_dst.gt_annotations, pred_annotations, 'segm')
+        print("\nEvaluating Refined Masks:")
+        coco_eval = COCOeval(valid_dst.gt_annotations, pred_annotations, "segm")
         coco_eval.evaluate()
         coco_eval.accumulate()
         coco_eval.summarize()
 
-        score['val/AP'] = coco_eval.stats[0]
-        score['val/AP50'] = coco_eval.stats[1]
-        score['val/AP75'] = coco_eval.stats[2]
-        score['val/AP_S'] = coco_eval.stats[3]
-        score['val/AP_M'] = coco_eval.stats[4]
-        score['val/AP_L'] = coco_eval.stats[5]
-        score['val/AR100'] = coco_eval.stats[7]
+        score["val/AP"] = coco_eval.stats[0]
+        score["val/AP50"] = coco_eval.stats[1]
+        score["val/AP75"] = coco_eval.stats[2]
+        score["val/AP_S"] = coco_eval.stats[3]
+        score["val/AP_M"] = coco_eval.stats[4]
+        score["val/AP_L"] = coco_eval.stats[5]
+        score["val/AR100"] = coco_eval.stats[7]
 
     return score
 
 
 if __name__ == "__main__":
-
     args = get_argparser().parse_args()
 
     # Setup random seed
@@ -329,15 +418,25 @@ if __name__ == "__main__":
 
     # Init dirstributed system
     if args.ddp:
-        torch.distributed.init_process_group(backend="nccl", rank=args.local_rank, world_size=n_gpus)
+        torch.distributed.init_process_group(
+            backend="nccl", rank=args.local_rank, world_size=n_gpus
+        )
         args.world_size = torch.distributed.get_world_size()
 
     batch_per_gpu_train = args.batch_size // n_gpus
-    
+
     # str -> integer list
-    args.train_size = list(map(int, args.train_size.split(","))) if len(args.train_size.split(",")) > 1 else int(args.train_size)
-    args.val_size = list(map(int, args.val_size.split(","))) if len(args.val_size.split(",")) > 1 else int(args.val_size)
-    
+    args.train_size = (
+        list(map(int, args.train_size.split(",")))
+        if len(args.train_size.split(",")) > 1
+        else int(args.train_size)
+    )
+    args.val_size = (
+        list(map(int, args.val_size.split(",")))
+        if len(args.val_size.split(",")) > 1
+        else int(args.val_size)
+    )
+
     # Setup dataloader
     train_dst, valid_dst = dataset_factory(args)
 
@@ -345,7 +444,9 @@ if __name__ == "__main__":
         train_dst,
         batch_size=batch_per_gpu_train,
         num_workers=args.workers,
-        sampler=DistributedSampler(train_dst, num_replicas=n_gpus, rank=args.local_rank) if args.ddp else None, 
+        sampler=DistributedSampler(train_dst, num_replicas=n_gpus, rank=args.local_rank)
+        if args.ddp
+        else None,
         shuffle=False if args.ddp else True,
         pin_memory=True,
         drop_last=True,
@@ -355,25 +456,30 @@ if __name__ == "__main__":
         valid_dst,
         batch_size=1,
         num_workers=0,
-        sampler=DistributedSampler(valid_dst, num_replicas=n_gpus, rank=args.local_rank) if args.ddp else None, 
+        sampler=DistributedSampler(valid_dst, num_replicas=n_gpus, rank=args.local_rank)
+        if args.ddp
+        else None,
         pin_memory=True,
         drop_last=False,
     )
 
     args.num_classes = NUM_CLASSES[args.dataset]
     print_func(f"LOG | Dataset | {train_dst} | {valid_dst} ", args.local_rank)
-    print_func("LOG | Num_Classes: %d, Train Iters: %d, Warm Iters: %d"
-        % (args.num_classes, args.train_iters, args.warm_iters), args.local_rank)
+    print_func(
+        "LOG | Num_Classes: %d, Train Iters: %d, Warm Iters: %d"
+        % (args.num_classes, args.train_iters, args.warm_iters),
+        args.local_rank,
+    )
 
     # Set up model
     # input channel
-        #   RGB image (3-channel)
-        #   prior mask (1-channel)
-        #   center map (num_classes+1 channel)
-    
+    #   RGB image (3-channel)
+    #   prior mask (1-channel)
+    #   center map (num_classes+1 channel)
+
     model = UNet_ResNet101(
         output_channel=2,
-        input_channel=3+1+args.num_classes+1,
+        input_channel=3 + 1 + args.num_classes + 1,
     )
     model.to(device)
 
@@ -386,7 +492,7 @@ if __name__ == "__main__":
 
     # Set up criterion
     criterion = DiceLoss()
-    
+
     # Restore
     if os.path.exists(args.restore):
         checkpoint = torch.load(args.restore, map_location=torch.device("cpu"))
@@ -396,7 +502,10 @@ if __name__ == "__main__":
         del checkpoint  # free memory
         # model.head_init()
     else:
-        print_func("LOG: Training without restoring weight: %s" % args.restore, rank=args.local_rank)
+        print_func(
+            "LOG: Training without restoring weight: %s" % args.restore,
+            rank=args.local_rank,
+        )
 
     # DDP
     if args.ddp:
@@ -412,4 +521,3 @@ if __name__ == "__main__":
     print_func(args, rank=args.local_rank)
 
     train()
-    

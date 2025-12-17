@@ -304,7 +304,19 @@ class ValidSet(data.Dataset):
             self.img_dir = os.path.join(root, "BDD100K", "%s", "%s")
             self.cls_ids = [c["id"] for c in BDD100K_CATEGORIES]
         else:
-            raise "[ERROR] Invalid dataset: support only coco and BDD100K "
+            raise ValueError("[ERROR] Invalid dataset: support only coco and BDD100K")
+
+        # Use environment variable if root is still placeholder
+        if root == "YOUR_DATA_ROOT" or not os.path.exists(root):
+            root = os.environ.get("DETECTRON2_DATASETS", root)
+            if root == "YOUR_DATA_ROOT" or not os.path.exists(root):
+                raise ValueError(
+                    "Please set DETECTRON2_DATASETS environment variable or pass --data_root argument"
+                )
+
+        # Construct full path for gt_json if needed
+        if not os.path.isabs(gt_json):
+            gt_json = os.path.join(root, self.dataset, "annotations", gt_json)
 
         self.gt_annotations = COCO(gt_json)
 

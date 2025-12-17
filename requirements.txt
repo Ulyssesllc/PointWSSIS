@@ -1,0 +1,42 @@
+# PointWSSIS Requirements
+# Core dependencies for running PointWSSIS
+
+# Required by iopath (used by fvcore)
+portalocker>=2.0.0
+
+# Core ML frameworks (usually pre-installed)
+torch>=1.10.0
+torchvision>=0.11.0
+numpy>=1.19.0
+opencv-python>=4.5.0
+
+# Detectron2 dependencies
+fvcore>=0.1.5
+iopath>=0.1.9
+pycocotools>=2.0.2
+tabulate
+cloudpickle
+omegaconf>=2.1
+hydra-core>=1.1
+
+# Additional dependencies
+Pillow>=8.0.0
+matplotlib>=3.3.0
+tqdm>=4.50.0
+pyyaml>=5.1
+scipy>=1.5.0
+scikit-image>=0.17.0
+scikit-learn>=0.24.0
+tensorboard>=2.5.0
+
+# Optional dependencies for specific features
+# shapely  # For text detection evaluation
+# rapidfuzz  # For text evaluation metrics
+# editdistance  # For text evaluation
+# lvis  # For LVIS dataset evaluation
+# cityscapesscripts  # For Cityscapes evaluation
+# panopticapi  # For panoptic segmentation
+
+# Build tools (for compiling extensions)
+# Cython>=0.29.0
+# ninja>=1.10.0
