@@ -1,0 +1,214 @@
+# PointWSSIS Evaluation Configuration
+# This file specifies experiment parameters for evaluating different weak supervision scenarios
+
+# Dataset Configuration
+dataset:
+  name: "COCO"
+  data_root: "/path/to/coco"  # Update this path
+  train_split: "train2017"
+  val_split: "val2017"
+  num_classes: 80
+
+# Model Configuration
+model:
+  base_config: "AdelaiDet/configs/PointWSSIS/R101_teacher.yaml"
+  architecture: "SOLOv2_R101"
+  
+# Weak Label Types
+# U: Unlabeled data
+# I: Image-level labels
+# P: Point labels (default)
+# B: Box labels
+# F: Full mask labels
+weak_label_types:
+  default: "P"  # Point labels as default
+  available: ["U", "I", "P", "B", "F"]
+
+# Experiment Proportions
+# Define different ratios of full labels vs weak labels
+experiments:
+  coco_1p:
+    full_label_percent: 1
+    weak_label_percent: 99
+    weak_type: "P"
+    config_file: "AdelaiDet/configs/PointWSSIS/R101_teacher.yaml"
+    teacher_weights: "training_dir/SOLOv2_R101_coco1p_teacher/model_final.pth"
+    student_weights: "training_dir/SOLOv2_R101_coco1p_student/model_final.pth"
+    description: "1% fully labeled + 99% point labeled"
+  
+  coco_2p:
+    full_label_percent: 2
+    weak_label_percent: 98
+    weak_type: "P"
+    config_file: "AdelaiDet/configs/PointWSSIS/R101_teacher.yaml"
+    teacher_weights: "training_dir/SOLOv2_R101_coco2p_teacher/model_final.pth"
+    student_weights: "training_dir/SOLOv2_R101_coco2p_student/model_final.pth"
+    description: "2% fully labeled + 98% point labeled"
+  
+  coco_5p:
+    full_label_percent: 5
+    weak_label_percent: 95
+    weak_type: "P"
+    config_file: "AdelaiDet/configs/PointWSSIS/R101_teacher.yaml"
+    teacher_weights: "training_dir/SOLOv2_R101_coco5p_teacher/model_final.pth"
+    student_weights: "training_dir/SOLOv2_R101_coco5p_student/model_final.pth"
+    description: "5% fully labeled + 95% point labeled"
+  
+  coco_10p:
+    full_label_percent: 10
+    weak_label_percent: 90
+    weak_type: "P"
+    config_file: "AdelaiDet/configs/PointWSSIS/R101_teacher.yaml"
+    teacher_weights: "training_dir/SOLOv2_R101_coco10p_teacher/model_final.pth"
+    student_weights: "training_dir/SOLOv2_R101_coco10p_student/model_final.pth"
+    description: "10% fully labeled + 90% point labeled"
+  
+  coco_20p:
+    full_label_percent: 20
+    weak_label_percent: 80
+    weak_type: "P"
+    config_file: "AdelaiDet/configs/PointWSSIS/R101_teacher.yaml"
+    teacher_weights: "training_dir/SOLOv2_R101_coco20p_teacher/model_final.pth"
+    student_weights: "training_dir/SOLOv2_R101_coco20p_student/model_final.pth"
+    description: "20% fully labeled + 80% point labeled"
+  
+  coco_30p:
+    full_label_percent: 30
+    weak_label_percent: 70
+    weak_type: "P"
+    config_file: "AdelaiDet/configs/PointWSSIS/R101_teacher.yaml"
+    teacher_weights: "training_dir/SOLOv2_R101_coco30p_teacher/model_final.pth"
+    student_weights: "training_dir/SOLOv2_R101_coco30p_student/model_final.pth"
+    description: "30% fully labeled + 70% point labeled"
+  
+  coco_50p:
+    full_label_percent: 50
+    weak_label_percent: 50
+    weak_type: "P"
+    config_file: "AdelaiDet/configs/PointWSSIS/R101_teacher.yaml"
+    teacher_weights: "training_dir/SOLOv2_R101_coco50p_teacher/model_final.pth"
+    student_weights: "training_dir/SOLOv2_R101_coco50p_student/model_final.pth"
+    description: "50% fully labeled + 50% point labeled"
+
+# Evaluation Settings
+evaluation:
+  batch_size: 1
+  num_workers: 4
+  use_cuda: true
+  metrics:
+    - "AP"      # Average Precision (primary metric)
+    - "AP50"    # AP at IoU threshold 0.50
+    - "AP75"    # AP at IoU threshold 0.75
+    - "APs"     # AP for small objects
+    - "APm"     # AP for medium objects
+    - "APl"     # AP for large objects
+  
+  # COCO evaluation parameters
+  iou_thresholds: [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
+  area_ranges:
+    small: [0, 32]      # 0^2 to 32^2 pixels
+    medium: [32, 96]    # 32^2 to 96^2 pixels
+    large: [96, 10000]  # 96^2 to 1e5 pixels
+  
+  max_dets_per_image: 100
+
+# Output Settings
+output:
+  base_dir: "evaluation_results"
+  save_predictions: true
+  save_visualizations: true
+  plot_formats: ["png", "pdf"]
+  
+  # Subdirectories
+  directories:
+    results: "results"
+    plots: "plots"
+    logs: "logs"
+    checkpoints: "checkpoints"
+
+# Visualization Settings
+visualization:
+  figure_size: [12, 7]
+  dpi: 300
+  style: "seaborn"
+  color_palette: "husl"
+  
+  # Plot types to generate
+  plots:
+    - "ap_trends"                  # Main AP trends across proportions
+    - "multi_metric_comparison"    # All metrics comparison
+    - "improvement_analysis"       # Performance gains analysis
+    - "label_efficiency"           # Cost-benefit analysis
+    - "performance_heatmap"        # Heatmap of all metrics
+    - "comprehensive_dashboard"    # All-in-one dashboard
+  
+  # Plot customization
+  colors:
+    teacher: "#1f77b4"    # Blue
+    student: "#ff7f0e"    # Orange
+    positive: "green"
+    negative: "red"
+  
+  markers:
+    teacher: "o"
+    student: "s"
+
+# Advanced Options
+advanced:
+  # Distributed evaluation
+  distributed:
+    enabled: false
+    num_gpus: 1
+    backend: "nccl"
+  
+  # Checkpointing
+  checkpoint:
+    save_interval: 1000
+    keep_last_n: 3
+  
+  # Logging
+  logging:
+    level: "INFO"
+    console: true
+    file: true
+    tensorboard: false
+  
+  # Reproducibility
+  random_seed: 42
+  deterministic: true
+  
+  # Performance optimization
+  mixed_precision: false
+  gradient_checkpointing: false
+  
+# Annotation Cost Model (for efficiency analysis)
+annotation_costs:
+  full_mask: 1.0       # Full segmentation mask (baseline)
+  box: 0.3             # Bounding box
+  point: 0.1           # Single point annotation
+  image_level: 0.05    # Image-level label
+  unlabeled: 0.0       # No annotation
+
+# Comparison Baselines (optional)
+baselines:
+  fully_supervised:
+    name: "Fully Supervised (100%)"
+    expected_ap: 39.7
+    description: "Model trained with 100% fully labeled data"
+  
+  supervised_10p:
+    name: "Supervised Baseline (10%)"
+    expected_ap: 29.5
+    description: "Model trained with only 10% fully labeled data, no weak labels"
+
+# Notes
+notes: |
+  This configuration file defines the experimental setup for evaluating PointWSSIS
+  across different weak supervision scenarios.
+  
+  Key metrics:
+  - AP: Average Precision across IoU thresholds 0.5:0.05:0.95
+  - AP50/AP75: AP at specific IoU thresholds
+  - APs/APm/APl: AP for different object sizes
+  
+  Update the paths in dataset.data_root and experiment weights before running.
