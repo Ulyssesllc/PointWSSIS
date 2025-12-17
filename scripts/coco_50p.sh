@@ -3,7 +3,21 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$( cd "${SCRIPT_DIR}/.." && pwd )"
 
+# Add AdelaiDet and detectron2 to PYTHONPATH
+export PYTHONPATH="${PROJECT_ROOT}/AdelaiDet:${PROJECT_ROOT}/detectron2:${PROJECT_ROOT}/MaskRefineNet:${PYTHONPATH}"
+
+# Set data root from environment or use placeholder
 root=${DETECTRON2_DATASETS:-"YOUR_DATA_ROOT"}
+
+# Validate data root is set
+if [ "$root" = "YOUR_DATA_ROOT" ]; then
+    echo "Error: Please set DETECTRON2_DATASETS environment variable"
+    echo "Example: export DETECTRON2_DATASETS=/path/to/coco"
+    exit 1
+fi
+
+export DETECTRON2_DATASETS=${root}
+
 config_file="configs/PointWSSIS/R101_teacher.yaml"
 exp_name="SOLOv2_R101_coco50p_teacher"
 trainsets="('coco_2017_train_50p_s',)"
@@ -16,8 +30,6 @@ decay_steps="(210000,250000)"
 train_iter="270001"
 
 ngpus=$(nvidia-smi --list-gpus | wc -l)
-
-export DETECTRON2_DATASETS=${root}
 
 # step 1
 OMP_NUM_THREADS=1 python3 -W ignore "${PROJECT_ROOT}/AdelaiDet/tools/train_net.py" \
