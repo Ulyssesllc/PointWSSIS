@@ -1,6 +1,9 @@
-cd AdelaiDet
+#!/bin/bash
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$( cd "${SCRIPT_DIR}/.." && pwd )"
 
-root=YOUR_DATA_ROOT
+root=${DETECTRON2_DATASETS:-"YOUR_DATA_ROOT"}
 config_file="configs/PointWSSIS/R101_teacher.yaml"
 exp_name="SOLOv2_R101_coco50p_teacher"
 trainsets="('coco_2017_train_50p_s',)"
@@ -17,7 +20,7 @@ ngpus=$(nvidia-smi --list-gpus | wc -l)
 export DETECTRON2_DATASETS=${root}
 
 # step 1
-OMP_NUM_THREADS=1 python3 -W ignore tools/train_net.py \
+OMP_NUM_THREADS=1 python3 -W ignore "${PROJECT_ROOT}/AdelaiDet/tools/train_net.py" \
     --config-file ${config_file} \
     --num-gpus ${ngpus} \
     SEED 1 \
@@ -35,7 +38,7 @@ OMP_NUM_THREADS=1 python3 -W ignore tools/train_net.py \
 testsets="('coco_2017_train_50p_w',)"
 prompt="point"
 inference_dir="inference_dir"
-OMP_NUM_THREADS=1 python -W ignore tools/train_net.py \
+OMP_NUM_THREADS=1 python3 -W ignore "${PROJECT_ROOT}/AdelaiDet/tools/train_net.py" \
     --config-file ${config_file} \
     --num-gpus ${ngpus} \
     --eval-only \
@@ -72,7 +75,7 @@ OMP_NUM_THREADS=1 python -W ignore tools/train_net.py \
 testsets="('coco_2017_train_50p_s',)"
 prompt="point_with_size"
 
-OMP_NUM_THREADS=1 python -W ignore tools/train_net.py \
+OMP_NUM_THREADS=1 python3 -W ignore "${PROJECT_ROOT}/AdelaiDet/tools/train_net.py" \
     --config-file ${config_file} \
     --num-gpus ${ngpus} \
     --eval-only \
@@ -82,7 +85,7 @@ OMP_NUM_THREADS=1 python -W ignore tools/train_net.py \
     MODEL.SOLOV2.PROMPT ${prompt} \
     DATASETS.TEST ${testsets} \
 
-OMP_NUM_THREADS=1 python -W ignore tools/train_net.py \
+OMP_NUM_THREADS=1 python3 -W ignore "${PROJECT_ROOT}/AdelaiDet/tools/train_net.py" \
     --config-file ${config_file} \
     --num-gpus ${ngpus} \
     --eval-only \
@@ -94,8 +97,6 @@ OMP_NUM_THREADS=1 python -W ignore tools/train_net.py \
 
 
 # step 5
-cd ../MaskRefineNet
-
 train_iters=200000
 warm_iters=2000
 val_interval=5000
@@ -103,10 +104,10 @@ val_interval=5000
 MRN_exp_name="MRN_50p"
 gt_json="instances_train2017_50p_s.json"
 
-weak_pth="../AdelaiDet/inference_dir/${exp_name}_strong_1/inference/instances_predictions.pth ../AdelaiDet/inference_dir/${exp_name}_strong_2/inference/instances_predictions.pth"
-eval_pth="../AdelaiDet/inference_dir/${exp_name}/inference/instances_predictions.pth"
+weak_pth="${PROJECT_ROOT}/AdelaiDet/inference_dir/${exp_name}_strong_1/inference/instances_predictions.pth ${PROJECT_ROOT}/AdelaiDet/inference_dir/${exp_name}_strong_2/inference/instances_predictions.pth"
+eval_pth="${PROJECT_ROOT}/AdelaiDet/inference_dir/${exp_name}/inference/instances_predictions.pth"
 
-torchrun --standalone --nnodes=1 --nproc_per_node=${ngpus} main.py \
+torchrun --standalone --nnodes=1 --nproc_per_node=${ngpus} "${PROJECT_ROOT}/MaskRefineNet/main.py" \
     --data_root ${root} \
     --workspace results \
     --exp_name ${MRN_exp_name} \
@@ -118,7 +119,7 @@ torchrun --standalone --nnodes=1 --nproc_per_node=${ngpus} main.py \
     --eval_pth ${eval_pth} \
     --amp
 
-torchrun --standalone --nnodes=1 --nproc_per_node=${ngpus} merge_strong_and_refined_weak_labels.py \
+torchrun --standalone --nnodes=1 --nproc_per_node=${ngpus} "${PROJECT_ROOT}/MaskRefineNet/merge_strong_and_refined_weak_labels.py" \
     --data_root ${root} \
     --ckpt results/${MRN_exp_name}/ckpt/best_AP.pt \
     --dataset coco \
@@ -130,13 +131,12 @@ torchrun --standalone --nnodes=1 --nproc_per_node=${ngpus} merge_strong_and_refi
 
 
 # step 6
-cd ../AdelaiDet
 config_file="configs/SOLOv2/R101_3x.yaml"
 trainsets="('coco_2017_train_50p_sw_refined',)"
 testsets="('coco_2017_val',)"
 exp_name="SOLOv2_R101_coco50p_sw_refined"
 
-OMP_NUM_THREADS=1 python3 -W ignore tools/train_net.py \
+OMP_NUM_THREADS=1 python3 -W ignore "${PROJECT_ROOT}/AdelaiDet/tools/train_net.py" \
     --config-file ${config_file} \
     --num-gpus ${ngpus} \
     SEED 1 \
