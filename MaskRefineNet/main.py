@@ -173,7 +173,7 @@ def print_func(string, rank):
         print(string)
 
 
-def train():
+def train(writer=None):
     # ==========   Train Loop   ==========#
     scaler = torch.cuda.amp.GradScaler(enabled=args.amp)
 
@@ -191,12 +191,16 @@ def train():
     # best score dict initialize
     best_AP = 0
 
+    # Initialize data iterator
+    data_iter = iter(train_loader)
+
     while cur_itrs < args.train_iters:
         try:
             data_end = time.time()
             dat = next(data_iter)
             data_time.update(time.time() - data_end)
-        except:
+        except StopIteration:
+            # Epoch finished, reset iterator
             epoch += 1
             data_iter = iter(train_loader)
             dat = next(data_iter)
@@ -264,7 +268,8 @@ def train():
                 )
                 report_dict["train/loss"] = avg_loss.avg
 
-                tensorboard_report(writer, report_dict, cur_itrs)
+                if writer is not None:
+                    tensorboard_report(writer, report_dict, cur_itrs)
 
         if (cur_itrs) % args.val_interval == 0:
             print_func("validation...", rank=args.local_rank)
@@ -282,7 +287,8 @@ def train():
                     if type(v) is not dict:
                         report_dict[k] = float(v)
 
-                tensorboard_report(writer, report_dict, cur_itrs)
+                if writer is not None:
+                    tensorboard_report(writer, report_dict, cur_itrs)
 
                 if val_score["val/AP"] >= best_AP:
                     best_AP = val_score["val/AP"]
@@ -411,6 +417,8 @@ if __name__ == "__main__":
         os.makedirs(session_dir, exist_ok=True, mode=0o777)
         os.makedirs(args.ckpt_dir, exist_ok=True, mode=0o777)
         writer = SummaryWriter(log_dir=session_dir)
+    else:
+        writer = None
 
     args.gpu = args.local_rank
     torch.cuda.set_device(args.gpu)
@@ -523,4 +531,4 @@ if __name__ == "__main__":
     print_func("LOG: start training...", rank=args.local_rank)
     print_func(args, rank=args.local_rank)
 
-    train()
+    train(writer)
