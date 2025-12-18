@@ -2,23 +2,171 @@
 
 ## Quick Start
 
-### 1. Install Missing Dependencies
-
-If you encounter the `ModuleNotFoundError: No module named 'portalocker'` error, install it:
+For a streamlined setup process, use the provided helper scripts:
 
 ```bash
+# 1. Verify your setup
+python scripts/verify_setup.py
+
+# 2. Download annotation files
+python scripts/download_annotations.py 1 2 5
+
+# 3. Run training
+bash scripts/coco_5p.sh
+```
+
+See below for detailed step-by-step instructions.
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+- Python 3.7+
+- CUDA 10.2+ (for GPU support)
+- GCC 5+ (for building C++ extensions)
+- COCO 2017 dataset
+
+## Helper Scripts
+
+We provide utility scripts to simplify setup:
+
+- **verify_setup.py**: Check installation completeness
+
+  ```bash
+  python scripts/verify_setup.py [--scenario 1p]
+  ```
+
+- **download_annotations.py**: Download point annotation files
+
+  ```bash
+  python scripts/download_annotations.py 1 2 5 [--pseudo] [--refined]
+  ```
+
+## Complete Setup Process
+
+### Step 1: Install Dependencies
+
+```bash
+# Install required packages
+pip install -r requirements.txt
+
+# Install additional required packages
 pip install portalocker
 ```
 
-Or install all requirements at once:
+### Step 2: Build C++ Extensions (REQUIRED)
+
+**CRITICAL:** You must build the C++ extensions before running any training scripts.
 
 ```bash
-pip install -r requirements.txt
+# Build detectron2
+cd detectron2
+python -m pip install -e .
+
+# Build AdelaiDet (includes _C extension)
+cd ../AdelaiDet
+python setup.py build develop --user
+
+# Verify the build
+python -c "from adet import _C; print('AdelaiDet _C module built successfully')"
 ```
 
-### 2. Set Environment Variables
+**Common build issues:**
 
-**IMPORTANT:** Before running any scripts, you **MUST** set the data root path:
+- If you get CUDA errors, ensure `nvcc --version` matches your PyTorch CUDA version
+- On Kaggle/Colab, you may need to run: `pip install ninja` first
+
+### Step 3: Prepare Point Annotation Files (REQUIRED)
+
+The point annotation files (`instances_train2017_*p_s.json`) are **NOT** part of the standard COCO dataset.
+
+#### Quick Method: Use Download Script
+
+We provide a convenient script to download all annotations:
+
+```bash
+# Download specific scenarios
+python scripts/download_annotations.py 1 2 5
+
+# Download all scenarios
+python scripts/download_annotations.py all
+
+# Include pseudo labels (optional, to skip training steps)
+python scripts/download_annotations.py 1 5 10 --pseudo --refined
+```
+
+#### Option A: Download Pre-Generated Annotations (Recommended)
+
+Download from the [official GitHub releases](https://github.com/clovaai/PointWSSIS/releases/tag/annotation_coco):
+
+```bash
+cd $DETECTRON2_DATASETS/coco/annotations/
+
+# Download for specific scenarios (examples):
+# For COCO 1%:
+wget https://github.com/clovaai/PointWSSIS/releases/download/annotation_coco/instances_train2017_1p_s.json
+wget https://github.com/clovaai/PointWSSIS/releases/download/annotation_coco/instances_train2017_1p_w.json
+
+# For COCO 2%:
+wget https://github.com/clovaai/PointWSSIS/releases/download/annotation_coco/instances_train2017_2p_s.json
+wget https://github.com/clovaai/PointWSSIS/releases/download/annotation_coco/instances_train2017_2p_w.json
+
+# For COCO 5%:
+wget https://github.com/clovaai/PointWSSIS/releases/download/annotation_coco/instances_train2017_5p_s.json
+wget https://github.com/clovaai/PointWSSIS/releases/download/annotation_coco/instances_train2017_5p_w.json
+
+# Similarly for 10p, 20p, 30p, 50p scenarios
+```
+
+**File suffixes explained:**
+
+- `*_s.json`: Strong (fully-labeled) subset - small portion with full masks
+- `*_w.json`: Weak (point-labeled) subset - larger portion with only point annotations
+- `*_sw.json`: Combined pseudo labels (optional, generated during training)
+- `*_sw_refined.json`: Refined pseudo labels with MaskRefineNet (optional)
+
+#### Option B: Generate Annotations Yourself
+
+Use the detectron2 PointSup tool (generates different format):
+
+```bash
+cd detectron2/projects/PointSup/tools
+
+# Generate with N points per instance
+python prepare_coco_point_annotations_without_masks.py 10
+
+# Output: instances_train2017_n10_v1_without_masks.json
+```
+
+**Note**: Option B generates a different format than PointWSSIS expects. For reproducibility with the paper, **use Option A**.
+
+#### On Kaggle/Colab without wget
+
+```python
+import requests
+import os
+
+annotations_dir = os.path.join(os.getenv('DETECTRON2_DATASETS'), 'coco/annotations')
+base_url = 'https://github.com/clovaai/PointWSSIS/releases/download/annotation_coco/'
+
+files = [
+    'instances_train2017_1p_s.json',
+    'instances_train2017_1p_w.json',
+    # Add more files as needed
+]
+
+for file in files:
+    url = base_url + file
+    response = requests.get(url)
+    filepath = os.path.join(annotations_dir, file)
+    with open(filepath, 'wb') as f:
+        f.write(response.content)
+    print(f'Downloaded {file}')
+```
+
+### Step 4: Set Environment Variables
+
+**IMPORTANT:** Set the data root path:
 
 ```bash
 export DETECTRON2_DATASETS=/path/to/your/coco/data
@@ -32,15 +180,29 @@ export DETECTRON2_DATASETS=/kaggle/input/coco-2017-dataset
 export DETECTRON2_DATASETS=/content/data
 ```
 
-**Note:** The scripts will validate this environment variable and exit with a clear error message if not set.
+### Step 5: Verify Setup
 
-**What the scripts do automatically:**
+**Use the verification script to check everything:**
 
-- Set `PYTHONPATH` to include AdelaiDet, detectron2, and MaskRefineNet modules
-- Validate that `DETECTRON2_DATASETS` is set before running
-- Export the environment variable for all child processes
+```bash
+# Basic verification
+python scripts/verify_setup.py
 
-### 3. Verify Setup
+# Verify specific scenario
+python scripts/verify_setup.py --scenario 1p
+```
+
+The script checks:
+
+- ✓ Python version (3.7+)
+- ✓ All dependencies installed
+- ✓ C++ extensions built (detectron2._C and adet._C)
+- ✓ CUDA availability
+- ✓ DETECTRON2_DATASETS environment variable
+- ✓ Data directory structure
+- ✓ Annotation files present
+
+**Manual verification:**
 
 Check that your data directory has the correct structure:
 
@@ -50,12 +212,28 @@ $DETECTRON2_DATASETS/
 │   ├── annotations/
 │   │   ├── instances_train2017.json
 │   │   ├── instances_val2017.json
-│   │   └── instances_train2017_*p_s.json  # Point annotation files
+│   │   └── instances_train2017_*p_s.json  # Point annotation files (MUST EXIST)
 │   ├── train2017/
 │   └── val2017/
 ```
 
-### 4. Run Training Scripts
+Verify all required files exist:
+
+```bash
+# Check annotation files
+ls -la $DETECTRON2_DATASETS/coco/annotations/instances_train2017_1p_s.json
+ls -la $DETECTRON2_DATASETS/coco/annotations/instances_train2017_2p_s.json
+ls -la $DETECTRON2_DATASETS/coco/annotations/instances_train2017_5p_s.json
+# ... and other percentages
+
+# Check C++ extension is built
+python -c "from adet import _C; print('✓ AdelaiDet C++ extension ready')"
+
+# Check environment variable
+echo "DETECTRON2_DATASETS=$DETECTRON2_DATASETS"
+```
+
+### Step 6: Run Training Scripts
 
 Now you can run the training scripts:
 
