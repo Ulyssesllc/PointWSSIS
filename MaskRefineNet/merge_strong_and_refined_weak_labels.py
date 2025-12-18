@@ -146,6 +146,9 @@ def inference():
 if __name__ == "__main__":
     args = get_argparser().parse_args()
 
+    # Strip quotes from data_root in case they were included from shell
+    args.data_root = args.data_root.strip('"').strip("'")
+
     args.gpu = args.local_rank
     torch.cuda.set_device(args.gpu)
     n_gpus = torch.cuda.device_count()

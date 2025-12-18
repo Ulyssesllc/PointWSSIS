@@ -396,6 +396,9 @@ def validate():
 if __name__ == "__main__":
     args = get_argparser().parse_args()
 
+    # Strip quotes from data_root in case they were included from shell
+    args.data_root = args.data_root.strip('"').strip("'")
+
     # Setup random seed
     torch.manual_seed(args.random_seed)
     np.random.seed(args.random_seed)

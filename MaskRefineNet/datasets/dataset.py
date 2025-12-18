@@ -65,6 +65,9 @@ class TrainSet(data.Dataset):
                     "Please set DETECTRON2_DATASETS environment variable or pass --data_root argument"
                 )
 
+        # Strip quotes that may be included from shell environment variables
+        root = root.strip('"').strip("'")
+
         with open(os.path.join(root, dataset, "annotations", self.gt_json)) as f:
             gt_annotations = json.load(f)
             # gt_image_ids = [p['id'] for p in gt_annotations['images']]
@@ -313,6 +316,9 @@ class ValidSet(data.Dataset):
                 raise ValueError(
                     "Please set DETECTRON2_DATASETS environment variable or pass --data_root argument"
                 )
+
+        # Strip quotes that may be included from shell environment variables
+        root = root.strip('"').strip("'")
 
         # Construct full path for gt_json if needed
         if not os.path.isabs(gt_json):
