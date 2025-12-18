@@ -164,6 +164,12 @@ Examples:
             sys.exit(1)
         annotations_dir = os.path.join(data_root, "coco", "annotations")
 
+    # Kaggle-specific fix: /kaggle/input is read-only
+    if annotations_dir.startswith("/kaggle/input"):
+        print(f"\n⚠️  Warning: Cannot write to /kaggle/input (read-only)")
+        annotations_dir = "/kaggle/working/coco/annotations"
+        print(f"   Redirecting to: {annotations_dir}")
+
     # Parse percentages
     if "all" in args.percentages:
         percentages = ALL_PERCENTAGES
