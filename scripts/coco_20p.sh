@@ -18,6 +18,9 @@ fi
 
 export DETECTRON2_DATASETS=${root}
 
+# Change to AdelaiDet directory so config paths work correctly
+cd "${PROJECT_ROOT}/AdelaiDet" || exit 1
+
 config_file="configs/PointWSSIS/R101_teacher.yaml"
 exp_name="SOLOv2_R101_coco20p_teacher"
 trainsets="('coco_2017_train_20p_s',)"
@@ -32,7 +35,7 @@ train_iter="120001"
 ngpus=$(nvidia-smi --list-gpus | wc -l)
 
 # step 1
-OMP_NUM_THREADS=1 python3 -W ignore "${PROJECT_ROOT}/AdelaiDet/tools/train_net.py" \
+OMP_NUM_THREADS=1 python3 -W ignore tools/train_net.py \
     --config-file ${config_file} \
     --num-gpus ${ngpus} \
     SEED 1 \
@@ -50,7 +53,7 @@ OMP_NUM_THREADS=1 python3 -W ignore "${PROJECT_ROOT}/AdelaiDet/tools/train_net.p
 testsets="('coco_2017_train_20p_w',)"
 prompt="point"
 inference_dir="inference_dir"
-OMP_NUM_THREADS=1 python3 -W ignore "${PROJECT_ROOT}/AdelaiDet/tools/train_net.py" \
+OMP_NUM_THREADS=1 python3 -W ignore tools/train_net.py \
     --config-file ${config_file} \
     --num-gpus ${ngpus} \
     --eval-only \
@@ -87,7 +90,7 @@ OMP_NUM_THREADS=1 python3 -W ignore "${PROJECT_ROOT}/AdelaiDet/tools/train_net.p
 testsets="('coco_2017_train_20p_s',)"
 prompt="point_with_size"
 
-OMP_NUM_THREADS=1 python3 -W ignore "${PROJECT_ROOT}/AdelaiDet/tools/train_net.py" \
+OMP_NUM_THREADS=1 python3 -W ignore tools/train_net.py \
     --config-file ${config_file} \
     --num-gpus ${ngpus} \
     --eval-only \
@@ -97,7 +100,7 @@ OMP_NUM_THREADS=1 python3 -W ignore "${PROJECT_ROOT}/AdelaiDet/tools/train_net.p
     MODEL.SOLOV2.PROMPT ${prompt} \
     DATASETS.TEST ${testsets} \
 
-OMP_NUM_THREADS=1 python3 -W ignore "${PROJECT_ROOT}/AdelaiDet/tools/train_net.py" \
+OMP_NUM_THREADS=1 python3 -W ignore tools/train_net.py \
     --config-file ${config_file} \
     --num-gpus ${ngpus} \
     --eval-only \
@@ -148,7 +151,7 @@ trainsets="('coco_2017_train_20p_sw_refined',)"
 testsets="('coco_2017_val',)"
 exp_name="SOLOv2_R101_coco20p_sw_refined"
 
-OMP_NUM_THREADS=1 python3 -W ignore "${PROJECT_ROOT}/AdelaiDet/tools/train_net.py" \
+OMP_NUM_THREADS=1 python3 -W ignore tools/train_net.py \
     --config-file ${config_file} \
     --num-gpus ${ngpus} \
     SEED 1 \

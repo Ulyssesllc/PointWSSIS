@@ -46,7 +46,11 @@ class TrainSet(data.Dataset):
 
         if self.dataset == "coco":
             self.cls_ids = [c["id"] for c in COCO_CATEGORIES]
-            self.img_dir = os.path.join(root, "coco", "train2017", "%012d.jpg")
+            # Check if root already ends with 'coco' to avoid duplication
+            if root.rstrip("/").endswith("coco"):
+                self.img_dir = os.path.join(root, "train2017", "%012d.jpg")
+            else:
+                self.img_dir = os.path.join(root, "coco", "train2017", "%012d.jpg")
         elif self.dataset == "BDD100K":
             self.cls_ids = [c["id"] for c in BDD100K_CATEGORIES]
             self.img_dir = os.path.join(root, "BDD100K", "train", "%s")
@@ -68,7 +72,13 @@ class TrainSet(data.Dataset):
         # Strip quotes that may be included from shell environment variables
         root = root.strip('"').strip("'")
 
-        with open(os.path.join(root, dataset, "annotations", self.gt_json)) as f:
+        # Check if root already ends with dataset name to avoid duplication
+        if root.rstrip("/").endswith(dataset):
+            annotations_path = os.path.join(root, "annotations", self.gt_json)
+        else:
+            annotations_path = os.path.join(root, dataset, "annotations", self.gt_json)
+
+        with open(annotations_path) as f:
             gt_annotations = json.load(f)
             # gt_image_ids = [p['id'] for p in gt_annotations['images']]
 
@@ -300,7 +310,11 @@ class ValidSet(data.Dataset):
         self.g = gaussian(self.sigma)
 
         if self.dataset == "coco":
-            self.img_dir = os.path.join(root, "coco", "train2017", "%012d.jpg")
+            # Check if root already ends with 'coco' to avoid duplication
+            if root.rstrip("/").endswith("coco"):
+                self.img_dir = os.path.join(root, "train2017", "%012d.jpg")
+            else:
+                self.img_dir = os.path.join(root, "coco", "train2017", "%012d.jpg")
             self.cls_ids = [c["id"] for c in COCO_CATEGORIES]
 
         elif self.dataset == "BDD100K":
@@ -322,7 +336,11 @@ class ValidSet(data.Dataset):
 
         # Construct full path for gt_json if needed
         if not os.path.isabs(gt_json):
-            gt_json = os.path.join(root, self.dataset, "annotations", gt_json)
+            # Check if root already ends with dataset name to avoid duplication
+            if root.rstrip("/").endswith(self.dataset):
+                gt_json = os.path.join(root, "annotations", gt_json)
+            else:
+                gt_json = os.path.join(root, self.dataset, "annotations", gt_json)
 
         self.gt_annotations = COCO(gt_json)
 
