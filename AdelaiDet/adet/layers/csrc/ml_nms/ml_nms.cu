@@ -71,7 +71,7 @@ __global__ void ml_nms_kernel(const int n_boxes, const float nms_overlap_thresh,
         t |= 1ULL << i;
       }
     }
-    const int col_blocks = THCCeilDiv(n_boxes, threadsPerBlock);
+    const int col_blocks = (n_boxes + threadsPerBlock - 1) / threadsPerBlock;
     dev_mask[cur_box_idx * col_blocks + col_start] = t;
   }
 }
@@ -90,20 +90,21 @@ namespace adet
 
     int boxes_num = boxes.size(0);
 
-    const int col_blocks = THCCeilDiv(boxes_num, threadsPerBlock);
+    const int col_blocks = (boxes_num + threadsPerBlock - 1) / threadsPerBlock;
 
-    scalar_t *boxes_dev = boxes_sorted.data<scalar_t>();
-
-    THCState *state = at::globalContext().lazyInitCUDA(); // TODO replace with getTHCState
+    scalar_t *boxes_dev = boxes_sorted.data_ptr<scalar_t>();
 
     unsigned long long *mask_dev = NULL;
-    // THCudaCheck(THCudaMalloc(state, (void**) &mask_dev,
-    //                       boxes_num * col_blocks * sizeof(unsigned long long)));
 
-    mask_dev = (unsigned long long *)THCudaMalloc(state, boxes_num * col_blocks * sizeof(unsigned long long));
+    // Allocate CUDA memory using c10 allocator
+    auto mask_dev_tensor = at::empty({boxes_num * col_blocks},
+                                     at::TensorOptions()
+                                         .dtype(at::kLong)
+                                         .device(boxes.device()));
+    mask_dev = reinterpret_cast<unsigned long long *>(mask_dev_tensor.data_ptr<int64_t>());
 
-    dim3 blocks(THCCeilDiv(boxes_num, threadsPerBlock),
-                THCCeilDiv(boxes_num, threadsPerBlock));
+    dim3 blocks((boxes_num + threadsPerBlock - 1) / threadsPerBlock,
+                (boxes_num + threadsPerBlock - 1) / threadsPerBlock);
     dim3 threads(threadsPerBlock);
     ml_nms_kernel<<<blocks, threads>>>(boxes_num,
                                        nms_overlap_thresh,
@@ -111,16 +112,16 @@ namespace adet
                                        mask_dev);
 
     std::vector<unsigned long long> mask_host(boxes_num * col_blocks);
-    THCudaCheck(cudaMemcpy(&mask_host[0],
-                           mask_dev,
-                           sizeof(unsigned long long) * boxes_num * col_blocks,
-                           cudaMemcpyDeviceToHost));
+    AT_CUDA_CHECK(cudaMemcpy(&mask_host[0],
+                             mask_dev,
+                             sizeof(unsigned long long) * boxes_num * col_blocks,
+                             cudaMemcpyDeviceToHost));
 
     std::vector<unsigned long long> remv(col_blocks);
     memset(&remv[0], 0, sizeof(unsigned long long) * col_blocks);
 
     at::Tensor keep = at::empty({boxes_num}, boxes.options().dtype(at::kLong).device(at::kCPU));
-    int64_t *keep_out = keep.data<int64_t>();
+    int64_t *keep_out = keep.data_ptr<int64_t>();
 
     int num_to_keep = 0;
     for (int i = 0; i < boxes_num; i++)
@@ -139,7 +140,7 @@ namespace adet
       }
     }
 
-    THCudaFree(state, mask_dev);
+    // Memory is automatically freed when mask_dev_tensor goes out of scope
     // TODO improve this part
     return std::get<0>(order_t.index({keep.narrow(/*dim=*/0, /*start=*/0, /*length=*/num_to_keep).to(order_t.device(), keep.scalar_type())}).sort(0, false));
   }
