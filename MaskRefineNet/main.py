@@ -6,6 +6,7 @@ Apache-2.0
 
 import os
 import warnings
+import sys
 
 warnings.filterwarnings(action="ignore")
 
@@ -103,7 +104,7 @@ def get_argparser():
     parser.add_argument("--weight_decay", type=float, default=0, help="weight decay")
 
     parser.add_argument(
-        "--batch_size", type=int, default=16, help="batch size (default: 16)"
+        "--batch_size", type=int, default=4, help="batch size (default: 4)"
     )
     parser.add_argument(
         "--train_size",
@@ -425,6 +426,14 @@ if __name__ == "__main__":
     n_gpus = torch.cuda.device_count()
     device = torch.device(f"cuda:{args.gpu}")
 
+    # fail fast without CUDA
+    if n_gpus == 0 or not torch.cuda.is_available():
+        print_func(
+            "ERROR | No CUDA GPUs available. Please install CUDA and a compatible PyTorch build.",
+            args.local_rank,
+        )
+        sys.exit(1)
+
     args.ddp = True if n_gpus > 1 else False
 
     # Init dirstributed system
@@ -434,7 +443,17 @@ if __name__ == "__main__":
         )
         args.world_size = torch.distributed.get_world_size()
 
-    batch_per_gpu_train = args.batch_size // n_gpus
+    # Ensure at least 1 sample per GPU to avoid invalid DataLoader configs
+    batch_per_gpu_train = max(
+        1, args.batch_size // n_gpus if n_gpus > 0 else args.batch_size
+    )
+
+    effective_global_batch = batch_per_gpu_train * max(1, n_gpus)
+    if effective_global_batch != args.batch_size:
+        print_func(
+            f"LOG | Adjusted per-GPU batch to {batch_per_gpu_train} (global {effective_global_batch}) from requested {args.batch_size}",
+            args.local_rank,
+        )
 
     # str -> integer list
     args.train_size = (

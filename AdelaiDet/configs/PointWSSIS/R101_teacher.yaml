@@ -4,7 +4,7 @@ MODEL:
   RESNETS:
     DEPTH: 101
 SOLVER:
-  IMS_PER_BATCH: 8  # Reduced from 16
+  IMS_PER_BATCH: 4  # Reduced from 8
   AMP:
     ENABLED: True   # Use mixed precision
 INPUT:

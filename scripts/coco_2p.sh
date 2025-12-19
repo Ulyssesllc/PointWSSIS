@@ -32,7 +32,21 @@ learning_rate="0.05"
 decay_steps="(15000,20000)"
 train_iter="25001"
 
-ngpus=$(nvidia-smi --list-gpus | wc -l)
+if command -v nvidia-smi >/dev/null 2>&1; then
+    ngpus=$(nvidia-smi --list-gpus | wc -l)
+else
+    if [ -n "${CUDA_VISIBLE_DEVICES:-}" ]; then
+        ngpus=$(echo "$CUDA_VISIBLE_DEVICES" | tr ',' '\n' | grep -c .)
+    else
+        ngpus=1
+    fi
+fi
+
+if command -v torchrun >/dev/null 2>&1; then
+    RUNNER="torchrun --standalone --nnodes=1 --nproc_per_node=${ngpus}"
+else
+    RUNNER="python -m torch.distributed.run --standalone --nnodes=1 --nproc_per_node=${ngpus}"
+fi
 
 # step 1
 OMP_NUM_THREADS=1 python3 -W ignore tools/train_net.py \
@@ -122,7 +136,7 @@ gt_json="instances_train2017_2p_s.json"
 weak_pth="${PROJECT_ROOT}/AdelaiDet/inference_dir/${exp_name}_strong_1/inference/instances_predictions.pth ${PROJECT_ROOT}/AdelaiDet/inference_dir/${exp_name}_strong_2/inference/instances_predictions.pth"
 eval_pth="${PROJECT_ROOT}/AdelaiDet/inference_dir/${exp_name}/inference/instances_predictions.pth"
 
-torchrun --standalone --nnodes=1 --nproc_per_node=${ngpus} "${PROJECT_ROOT}/MaskRefineNet/main.py" \
+${RUNNER} "${PROJECT_ROOT}/MaskRefineNet/main.py" \
     --data_root ${root} \
     --workspace results \
     --exp_name ${MRN_exp_name} \
@@ -134,7 +148,7 @@ torchrun --standalone --nnodes=1 --nproc_per_node=${ngpus} "${PROJECT_ROOT}/Mask
     --eval_pth ${eval_pth} \
     --amp
 
-torchrun --standalone --nnodes=1 --nproc_per_node=${ngpus} "${PROJECT_ROOT}/MaskRefineNet/merge_strong_and_refined_weak_labels.py" \
+${RUNNER} "${PROJECT_ROOT}/MaskRefineNet/merge_strong_and_refined_weak_labels.py" \
     --data_root ${root} \
     --ckpt results/${MRN_exp_name}/ckpt/best_AP.pt \
     --dataset coco \
@@ -159,5 +173,4 @@ OMP_NUM_THREADS=1 python3 -W ignore tools/train_net.py \
     DATASETS.TRAIN ${trainsets} \
     DATASETS.TEST ${testsets} \
     TEST.EVAL_PERIOD 5000
-    
-    
+

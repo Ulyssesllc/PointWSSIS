@@ -6,3 +6,9 @@ MODEL:
 SOLVER:
   STEPS: (210000, 250000)
   MAX_ITER: 270000
+  IMS_PER_BATCH: 4  # Reduced from Base 16
+  AMP:
+    ENABLED: True   # Use mixed precision to save memory
+INPUT:
+  MIN_SIZE_TRAIN: (512,)  # Reduced from (640, 672, 704, 736, 768, 800)
+  MAX_SIZE_TRAIN: 1024     # Reduced from 1333

@@ -52,6 +52,10 @@ def check_dependencies():
         "fvcore",
         "iopath",
         "portalocker",
+        # added: used by evaluation & progress reporting
+        "shapely",
+        "rapidfuzz",
+        "tqdm",
     ]
 
     missing = []
