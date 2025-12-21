@@ -36,11 +36,13 @@ class ResNetUNet(nn.Module):
             self.layer0 = nn.Sequential(*base_layers[0:3])
         else:
             self.layer0 = nn.Sequential(
-                nn.Conv2d(input_channel, 64, kernel_size=7, stride=2, padding=3, bias=False),
+                nn.Conv2d(
+                    input_channel, 64, kernel_size=7, stride=2, padding=3, bias=False
+                ),
                 base_layers[1],
                 base_layers[2],
             )
-        
+
         self.layer1 = nn.Sequential(*base_layers[3:5])
         self.layer2 = base_layers[5]
         self.layer3 = base_layers[6]
@@ -57,36 +59,44 @@ class ResNetUNet(nn.Module):
 
         self.head_init()
 
-
-    def head_init(self,):
+    def head_init(
+        self,
+    ):
         for m in self.head.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.normal_(m.weight, mean=0, std=0.001)
 
-
     def forward(self, x):
         ori_size = x.size()[2:]
 
-        enc_0 = self.layer0(x)     # [B, 64, H/2, W/2]
-        enc_1 = self.layer1(enc_0) # [B, 256, H/4, W/4]
-        enc_2 = self.layer2(enc_1) # [B, 512, H/8, W/8]
-        enc_3 = self.layer3(enc_2) # [B, 1024, H/16, W/16]
-        enc_4 = self.layer4(enc_3) # [B, 2048, H/32, W/32]
+        enc_0 = self.layer0(x)  # [B, 64, H/2, W/2]
+        enc_1 = self.layer1(enc_0)  # [B, 256, H/4, W/4]
+        enc_2 = self.layer2(enc_1)  # [B, 512, H/8, W/8]
+        enc_3 = self.layer3(enc_2)  # [B, 1024, H/16, W/16]
+        enc_4 = self.layer4(enc_3)  # [B, 2048, H/32, W/32]
 
         x = self.aspp(enc_4)
-        x = F.interpolate(x, size=enc_3.size()[2:], mode="bilinear", align_corners=False)
+        x = F.interpolate(
+            x, size=enc_3.size()[2:], mode="bilinear", align_corners=False
+        )
         x = torch.cat([x, enc_3], dim=1)
         x = self.decoder_3(x)
 
-        x = F.interpolate(x, size=enc_2.size()[2:], mode="bilinear", align_corners=False)
+        x = F.interpolate(
+            x, size=enc_2.size()[2:], mode="bilinear", align_corners=False
+        )
         x = torch.cat([x, enc_2], dim=1)
         x = self.decoder_2(x)
 
-        x = F.interpolate(x, size=enc_1.size()[2:], mode="bilinear", align_corners=False)
+        x = F.interpolate(
+            x, size=enc_1.size()[2:], mode="bilinear", align_corners=False
+        )
         x = torch.cat([x, enc_1], dim=1)
         x = self.decoder_1(x)
 
-        x = F.interpolate(x, size=enc_0.size()[2:], mode="bilinear", align_corners=False)
+        x = F.interpolate(
+            x, size=enc_0.size()[2:], mode="bilinear", align_corners=False
+        )
         x = torch.cat([x, enc_0], dim=1)
         x = self.decoder_0(x)
 
@@ -109,11 +119,10 @@ def UNet_ResNet101(
 
 
 if __name__ == "__main__":
-
     input_channel = 85
     output_channel = 2
 
-    net = UNet(output_channel, input_channel).cuda()
+    net = UNet_ResNet101(output_channel, input_channel).cuda()
 
     in_ten = torch.randn(1, input_channel, 256, 256).cuda()
 
